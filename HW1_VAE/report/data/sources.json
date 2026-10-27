@@ -1,0 +1,13 @@
+{
+  "neurips_template": {
+    "url": "https://media.neurips.cc/Conferences/NeurIPS2026/Formatting_Instructions_For_NeurIPS_2026.zip",
+    "style_sha256": "c3fc2894e83d2517ca18b66741d6c595986d97957dc08ec08bb2125a7ec4555a"
+  },
+  "ignite_tutorial": "https://pytorch-ignite.ai/blog/gan-evaluation-with-fid-and-is/",
+  "ignite_fid_documentation": "https://docs.pytorch.org/ignite/generated/ignite.metrics.FID.html",
+  "vae": "https://arxiv.org/abs/1312.6114",
+  "fid": "https://arxiv.org/abs/1706.08500",
+  "inception_score_limitations": "https://arxiv.org/abs/1801.01973",
+  "dataset": "https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia",
+  "accessed_on": "2026-10-27"
+}

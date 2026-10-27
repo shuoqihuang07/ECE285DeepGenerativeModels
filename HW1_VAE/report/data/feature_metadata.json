@@ -1,0 +1,25 @@
+{
+  "weights": "Inception_V3_Weights.IMAGENET1K_V1",
+  "weights_url": "https://download.pytorch.org/models/inception_v3_google-0cc3c7bd.pth",
+  "weights_sha256": "0cc3c7bd75056d25e46cba549dc184522069b81e9787eff6df84f397bd52a5ef",
+  "num_real": 624,
+  "num_generated": 624,
+  "device": "cpu",
+  "batch_size": 16,
+  "threads": 6,
+  "feature_dimension": 2048,
+  "probability_dimension": 1000,
+  "preprocessing": "128x128 saved PNG -> RGB -> PIL bilinear 299x299 -> ToTensor [0,1] -> ImageNet mean/std; torchvision transform_input=True",
+  "fid_implementation": "ignite.metrics.FID, num_features=2048, identity extractor on avgpool outputs",
+  "additional_fid": "1000-way softmax probability FID, not standard pool-feature FID",
+  "source": "https://pytorch-ignite.ai/blog/gan-evaluation-with-fid-and-is/",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "versions": {
+    "torch": "2.14.1",
+    "torchvision": "0.29.1",
+    "pytorch-ignite": "0.5.5",
+    "numpy": "2.5.4",
+    "scipy": "1.18.1",
+    "Pillow": "13.0.0"
+  }
+}

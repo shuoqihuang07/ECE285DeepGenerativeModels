@@ -1,0 +1,8 @@
+.DS_Store
+._*
+__pycache__/
+*.py[cod]
+.venv/
+HW1_VAE/data/
+HW1_VAE/runs/
+HW1_VAE/generated/
