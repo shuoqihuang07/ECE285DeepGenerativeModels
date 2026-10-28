@@ -1,5 +1,3 @@
-"""Render loss curves, including from a completed run's saved history.csv."""
-
 import argparse
 import csv
 from pathlib import Path

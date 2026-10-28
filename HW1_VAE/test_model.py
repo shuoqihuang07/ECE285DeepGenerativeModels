@@ -1,5 +1,3 @@
-"""Small numerical and gradient checks; no dataset download required."""
-
 import math
 import unittest
 

@@ -1,11 +1,13 @@
 # Chest X-ray VAE (PyTorch)
 
-A convolutional variational autoencoder for the HW1 chest X-ray generation task.
-It learns from both NORMAL and PNEUMONIA images without using their labels.
+This folder contains the code for HW1: training a variational autoencoder to
+generate chest X-rays. The model learns from NORMAL and PNEUMONIA images together,
+without using their labels. It reconstructs images during training, then generates
+new ones by decoding samples from a standard normal distribution.
 
 ## Setup and data
 
-Run these commands from `HW1_VAE` with Python 3.10 or newer:
+Use Python 3.10 or newer. Run the commands below from `HW1_VAE/`:
 
 ```bash
 python3 -m venv .venv
@@ -14,7 +16,7 @@ pip install -r requirements.txt
 ```
 
 Download and extract the [Kaggle chest X-ray dataset](https://www.kaggle.com/datasets/paultimothymooney/chest-xray-pneumonia).
-Pass the directory that directly contains `train`, `val`, and `test`:
+Use the directory that directly contains `train/`, `val/`, and `test/`:
 
 ```text
 data/chest_xray/
@@ -29,11 +31,12 @@ data/chest_xray/
     PNEUMONIA/*.jpeg
 ```
 
-The loader recursively reads JPEG/PNG files in each selected split, converts them
-to one grayscale channel, resizes to a square, and scales intensities to [0, 1].
-Training reads only `train/`; checkpoint selection reads only `val/`. The supplied
-validation split is small, so validation estimates may be noisy. Keep `test/`
-held out for final evaluation. Data and generated outputs are ignored by Git.
+The loader reads JPEG and PNG files recursively, converts them to grayscale,
+resizes them to a square, and scales pixel values to [0, 1]. Only `train/` updates
+the model's weights. Validation loss on `val/` determines which checkpoint to
+keep; `test/` is reserved for final evaluation. The supplied validation set has
+just 16 images, so small changes in its loss need care when interpreting results.
+Git ignores the downloaded data and generated outputs.
 
 ## Train
 
@@ -41,13 +44,16 @@ held out for final evaluation. Data and generated outputs are ignored by Git.
 python train.py --data-dir data/chest_xray --epochs 50 --batch-size 64
 ```
 
-The default model uses 128x128 images, four stride-2 convolutional encoder layers
-with 32/64/128/256 channels, a 128-dimensional latent vector, and a mirrored
-transposed-convolution decoder. Independent linear heads predict the Gaussian
-mean and log variance. Sampling uses `z = mu + exp(0.5 * logvar) * epsilon` with
-`epsilon ~ N(0, I)`; generation draws directly from the standard-normal prior.
+By default, the encoder takes 128x128 images through four stride-2 convolutional
+layers with 32, 64, 128, and 256 channels. Two linear heads predict the mean and
+log variance of a 128-dimensional Gaussian. The decoder maps a sampled latent
+vector back to an image through a linear projection and transposed convolutions.
 
-The objective is the negative evidence lower bound:
+During training, the latent sample is
+`z = mu + exp(0.5 * logvar) * epsilon`, where `epsilon ~ N(0, I)`. For new images,
+the decoder receives a draw directly from `N(0, I)`.
+
+The loss balances reconstruction against KL divergence:
 
 ```text
 reconstruction = mean_over_batch(sum_over_pixels(BCEWithLogits(decoder(z), x)))
@@ -55,27 +61,28 @@ KL = mean_over_batch(-0.5 * sum_over_latents(1 + logvar - mu^2 - exp(logvar)))
 loss = reconstruction + beta * KL
 ```
 
-The default `beta=1` gives the standard VAE objective. BCE on continuous grayscale
-intensities is used as a reconstruction surrogate. The decoder returns logits;
-sigmoid is applied only to displayed or saved images. Losses are summed over
-pixels/latent dimensions and averaged over images, so their magnitudes depend on
-image resolution. Optimization uses Adam with learning rate 0.001.
+With `beta=1`, this has the standard negative-ELBO form. Since the targets are
+continuous grayscale intensities, BCE is used as a reconstruction surrogate.
+The loss takes decoder logits directly; sigmoid is applied when displaying or
+saving images. Reconstruction is summed over pixels and KL over latent
+dimensions, then both are averaged over images. This means image resolution
+affects the loss scale. Adam uses a default learning rate of 0.001.
 
-CUDA, Apple MPS, or CPU is selected automatically. Use `--device cpu` to override.
-Other options include `--image-size` (a multiple of 16), `--latent-dim`,
-`--base-channels`, `--lr`, `--beta`, `--seed`, `--workers`, and `--output-dir`.
-Reduce batch size if memory is limited. A fixed seed controls random initialization
-and sampling; accelerator kernels can still vary across runs.
+The script selects CUDA, Apple MPS, or CPU automatically. Set `--device cpu` to
+choose CPU explicitly, or reduce `--batch-size` if memory is limited. You can also
+change `--image-size` (a multiple of 16), `--latent-dim`, `--base-channels`, `--lr`,
+`--beta`, `--seed`, `--workers`, and `--output-dir`. A fixed seed helps reproduce
+initialization and sampling, although results can still vary by device and library version.
 
 Outputs in `runs/vae/`:
 
-- `best.pt`: model with the lowest validation objective; `last.pt`: latest model.
-  Both include model configuration, weights, optimizer state, and training settings.
+- `best.pt`: checkpoint with the lowest validation loss. `last.pt` holds the most
+  recent epoch. Both save the configuration, weights, optimizer state, and settings.
 - `config.json`: hyperparameters and paths.
 - `history.csv` and `loss_curves.png`: train/validation total, reconstruction, and KL losses.
 - `samples_001.png`, etc.: prior samples from fixed latent vectors each epoch.
-- `reconstructions.png`: validation originals on the top row and reconstructions
-  from posterior means on the bottom row.
+- `reconstructions.png`: original validation images above reconstructions made
+  by decoding their posterior-mean latent vectors.
 
 ## Generate
 
@@ -83,8 +90,8 @@ Outputs in `runs/vae/`:
 python generate.py --checkpoint runs/vae/best.pt --num-samples 64 --output-dir generated
 ```
 
-This saves individual grayscale PNGs and `grid.png`. Generation processes images
-in batches (`--batch-size`) and accepts `--seed` and `--device`.
+The script loads the checkpoint and saves individual grayscale images plus
+`grid.png`. Use `--batch-size`, `--seed`, and `--device` to control the sampling run.
 
 ## Verify
 
@@ -92,8 +99,9 @@ in batches (`--batch-size`) and accepts `--seed` and `--device`.
 python -m unittest -v test_model.py test_plot_history.py
 ```
 
-The checks cover tensor shapes, gradients through both encoder heads and decoder,
-the analytic reconstruction/KL loss, batch averaging, and sampling statistics.
+These tests check tensor shapes, gradients through both encoder heads and the
+decoder projection, reconstruction/KL arithmetic, batch averaging, and sampling
+statistics. They verify the implementation; they do not measure image realism.
 
 To regenerate loss curves from a completed run without retraining:
 
@@ -101,13 +109,13 @@ To regenerate loss curves from a completed run without retraining:
 python plot_history.py --history runs/vae/history.csv
 ```
 
-Plotting uses Matplotlib's Agg canvas directly. This avoids loading pyplot's
-style library, which can mistake macOS `._` metadata files on external drives
-for text style files and raise a `UnicodeDecodeError`.
+Plotting uses Matplotlib's Agg canvas directly. This avoids a problem encountered
+on the external drive: pyplot treated binary macOS `._` metadata as text style
+files and raised a `UnicodeDecodeError` after training had finished.
 
-The completed [report package](report/README.md) contains the two-page NeurIPS
-report, the selected checkpoint, 624 generated images, the held-out evaluation
-inputs, training curves, and reproducible Ignite metric code. Measured results
-are FID 283.72 (torchvision 2,048-D pooled features) and Inception Score 2.095.
-See the package README for the exact preprocessing, metric limitations, and
-instructions to recompute scores or rebuild the PDF without retraining.
+The [report package](report/README.md) includes the two-page NeurIPS report,
+selected checkpoint, 624 generated images, held-out evaluation inputs, curves,
+and Ignite evaluation code. This run produced FID 283.72 using torchvision's
+2,048-D pooled features and Inception Score 2.095. Its README explains the
+preprocessing and limitations, and how to reproduce the scores or rebuild the
+report from saved results.

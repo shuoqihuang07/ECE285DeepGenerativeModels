@@ -1,5 +1,3 @@
-"""Check plotting without pyplot or its filesystem-dependent style discovery."""
-
 import tempfile
 import unittest
 from pathlib import Path

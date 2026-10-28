@@ -1,5 +1,3 @@
-"""Sample grayscale X-rays from a trained VAE checkpoint."""
-
 import argparse
 import math
 from pathlib import Path

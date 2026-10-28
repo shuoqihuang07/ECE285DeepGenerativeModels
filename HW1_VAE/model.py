@@ -1,17 +1,9 @@
-"""Convolutional variational autoencoder for grayscale chest X-rays."""
-
 import torch
 from torch import nn
 from torch.nn import functional as F
 
 
 class VAE(nn.Module):
-    """Gaussian encoder, standard-normal prior, and Bernoulli decoder.
-
-    Inputs have shape (batch, 1, image_size, image_size) and values in [0, 1].
-    The decoder returns logits so the reconstruction loss is numerically stable.
-    """
-
     def __init__(self, image_size=128, latent_dim=128, base_channels=32):
         super().__init__()
         if image_size < 16 or image_size % 16:
@@ -62,11 +54,6 @@ class VAE(nn.Module):
 
 
 def vae_loss(logits, target, mu, logvar, beta=1.0):
-    """Negative ELBO: pixel-summed BCE + beta * latent-summed KL, per image.
-
-    beta=1 gives the standard VAE objective. Fractional grayscale values use
-    BCE as a reconstruction surrogate, without stochastic binarization.
-    """
     reconstruction = F.binary_cross_entropy_with_logits(
         logits, target, reduction="none"
     ).flatten(1).sum(1).mean()

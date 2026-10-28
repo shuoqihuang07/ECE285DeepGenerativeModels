@@ -1,5 +1,3 @@
-"""Train a VAE on the Kaggle chest_xray directory (labels are ignored)."""
-
 import argparse
 import csv
 import json
